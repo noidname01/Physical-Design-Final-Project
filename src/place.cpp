@@ -718,6 +718,14 @@ void Placer::outputViaDecisionResult(string& fileName){
         return;
     }
     plFile.close();
+    size_t pos = fileName.rfind("/");
+    string caseName;
+    if(pos != string::npos){
+        caseName = fileName.substr(pos+1);
+    }
+    else{
+        caseName = fileName;
+    }
 
     fstream fout;
     fstream fout2;
@@ -733,13 +741,14 @@ void Placer::outputViaDecisionResult(string& fileName){
         int cuttedNetId = _cutted_net[i];
         int index_x = _cuttedNetIdToNearestVia[cuttedNetId][0];
         int index_y = _cuttedNetIdToNearestVia[cuttedNetId][1];
-        int pos_x = _spacingTerminal + index_x * (_sizeTerminalX + _spacingTerminal);
-        int pos_y = _spacingTerminal + index_y * (_sizeTerminalY + _spacingTerminal);;
+        int pos_x = _spacingTerminal + index_x * (_sizeTerminalX + _spacingTerminal) + _sizeTerminalX/2;
+        int pos_y = _spacingTerminal + index_y * (_sizeTerminalY + _spacingTerminal) + _sizeTerminalY/2;
         fout << "n" + to_string(_cutted_net[i]) << "\t" << pos_x << "\t" << pos_y << " : N" << endl;
         fout2 << "n" + to_string(_cutted_net[i]) << "\t" << pos_x << "\t" << pos_y << " : N" << endl;
     }
     // write modules
     for(int i = 0; i < _num_module; ++i){
+        if(fileName == "case1")
         if(_partitioner->_cellArray[i]->getPart() == 0){
             fout << _modules[i].m_name << "\t" << _modules[i].m_x << "\t" << _modules[i].m_y << "\t" << 0 << " : N" << endl;
         }
@@ -761,8 +770,8 @@ void Placer::outputViaDecisionResult(string& fileName){
     fout << "NumTerminals :\t" << num_term << endl << endl;
     fout2 << "NumTerminals :\t" << num_term << endl << endl;
     for(int i = 0; i < num_term; ++i){
-        fout << "n" + to_string(_cutted_net[i]) << "\t" << _sizeTerminalX << "\t" << _sizeTerminalY << "\t" << "terminal" << endl;
-        fout2 << "n" + to_string(_cutted_net[i]) << "\t" << _sizeTerminalX << "\t" << _sizeTerminalY << "\t" << "terminal" << endl;
+        fout << "n" + to_string(_cutted_net[i]) << "\t" << 0 << "\t" << 0 << "\t" << "terminal" << endl;
+        fout2 << "n" + to_string(_cutted_net[i]) << "\t" << 0 << "\t" << 0 << "\t" << "terminal" << endl;
     }
     for(int i = 0; i < _num_module; ++i){
         if(_partitioner->_cellArray[i]->getPart() == 0){
@@ -883,14 +892,7 @@ void Placer::outputViaDecisionResult(string& fileName){
     fout2.close();
 
     // top/bot aux w/ terminals
-    size_t pos = fileName.rfind("/");
-    string caseName;
-    if(pos != string::npos){
-        caseName = fileName.substr(pos+1);
-    }
-    else{
-        caseName = fileName;
-    }
+    
     fout.open(fileName + "_top_term.aux", ios::out);
     fout2.open(fileName + "_bot_term.aux", ios::out);
     fout << "RowBasedPlacement : ";
