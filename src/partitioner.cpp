@@ -51,8 +51,9 @@ void Partitioner::initialize(vector<int>& m_top_list, vector<int>& m_bot_list, v
         int currentId = m_top_list[i];
         _cellArray[currentId]->setPart(0);
         ++_partSize[0];
-        vector<int> tmpNetList = _cellArray[i]->getNetList();
+        vector<int> tmpNetList = _cellArray[currentId]->getNetList();
         for(vector<int>::iterator it = tmpNetList.begin(); it != tmpNetList.end(); ++it){
+            //cout << currentId << " : net " << (*it) << " p: " << _netArray[(*it)]->getPartCount(0) << endl;
             _netArray[(*it)]->incPartCount(0);
         }
         _cellArray[currentId]->setGain(0);
@@ -63,8 +64,9 @@ void Partitioner::initialize(vector<int>& m_top_list, vector<int>& m_bot_list, v
         int currentId  = m_bot_list[i];
         _cellArray[currentId]->setPart(1);
         ++_partSize[1];
-        vector<int> tmpNetList = _cellArray[i]->getNetList();
+        vector<int> tmpNetList = _cellArray[currentId]->getNetList();
         for(vector<int>::iterator it = tmpNetList.begin(); it != tmpNetList.end(); ++it){
+            //cout << currentId << " : net " << (*it) << " p: " << _netArray[(*it)]->getPartCount(1) << endl;
             _netArray[(*it)]->incPartCount(1);
         }
         _cellArray[currentId]->setGain(0);
@@ -95,6 +97,7 @@ void Partitioner::computeGain()
         // cut size
         if((*it)->getPartCount(0) && (*it)->getPartCount(1)){
             ++_cutSize;
+            //cout << "*" << _cutSize << endl;
         }
         // gain
         vector<int> tmpCellList = (*it)->getCellList();
@@ -385,7 +388,7 @@ void Partitioner::partition()
             }
             else{
                 _accGain += _cellArray[moveCellId]->getGain();
-                //cout << "cell: " << _cellArray[moveCellId]->getName() << "  g: " << _cellArray[moveCellId]->getGain() << "  acc: " << _accGain << endl;
+                //cout << "cell: " << moveCellId << "  g: " << _cellArray[moveCellId]->getGain() << "  acc: " << _accGain << endl;
                 if(_moveNum == 1){
                     _maxAccGain = _accGain;
                     _bestMoveNum = _moveNum;
@@ -461,7 +464,7 @@ void Partitioner::partition()
         ++_iterNum;
 
     }while(_maxAccGain > 0);
-
+    
     // verify the answer
     cout << endl << "verify:" << endl;
     int sizeA = 0;

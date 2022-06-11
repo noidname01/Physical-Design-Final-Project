@@ -245,7 +245,7 @@ void Placer::parseInput(fstream& inFile)
     cout << "Bot used area : " << botCurrentArea << endl;
     cout << "Die area : " << _dieArea << endl;
     cout << "Bot used area ratio : " << (double)botCurrentArea / (double)_dieArea << endl;
-    cout << "Bot Util : " << botUtil << endl;
+    cout << "Bot Util : " << botUtil << endl;//////////////////////////////////////////////////////////////////
 
     // NumNets
     inFile >> str;
@@ -257,9 +257,9 @@ void Placer::parseInput(fstream& inFile)
         inFile >> str;
         string netName;
         inFile >> netName;
-        if(_netNameToId.count(netName) == 0){
-            _netNameToId[netName] = i;
-        }
+        
+        _netNameToId[netName] = i;
+        _netIdToName.push_back(netName);
         inFile >> str;
         int num_pin = stod(str);
         vector<vector<int>> net;
@@ -303,10 +303,10 @@ void Placer::initialPartition(){
         n_list.push_back(modules);
     }
     for(int i = 0; i < n_list.size(); ++i){
-        //cout << i << " net : " << endl;
+        /*cout << i << " net : " << endl;
         for(int j = 0; j < n_list[i].size(); ++j){
-            //cout << n_list[i][j] << endl;
-        }
+            cout << n_list[i][j] << endl;
+        }*/
     }
 
     cout << "top : " << m_top_list.size() << endl;
@@ -551,10 +551,14 @@ void Placer::BFS_via(int currentNetId,int i_x, int i_y){
         vector<int> via = QQ.front();
         QQ.pop();
         if(!_occupiedViaMap[via[0]][via[1]]){
+            cout << "BFS result : " << via[0] << "  " << via[1] << "  "  << _occupiedViaMap[via[0]][via[1]] << endl;
             _occupiedViaMap[via[0]][via[1]] = 1;
             _cuttedNetIdToNearestVia[currentNetId] = {via[0], via[1]};
             return;
         }
+        cout << "BFS process : " << via[0] << "  " << via[1] << "  "  << _occupiedViaMap[via[0]][via[1]] << endl;
+        i_x = via[0];
+        i_y = via[1];
         vector<int> up = {i_x, min(i_y+1, _num_via_y-1)};
         vector<int> down = {i_x, max(i_y-1, 0)};
         vector<int> left = {max(i_x-1, 0), i_y};
@@ -566,11 +570,12 @@ void Placer::BFS_via(int currentNetId,int i_x, int i_y){
                 QQ.push(adj[i]);
             }
         }
+        colorMap[via[0]][via[1]] = 1;
     }
 }
 
 void Placer::viaDecision(string& fileName){
-    bool die = !(_partitioner->getPartSize(0) <= _partitioner->getPartSize(1));
+    _terminalDecisionDie = !(_partitioner->getPartSize(0) <= _partitioner->getPartSize(1));
     string postfix = (_partitioner->getPartSize(0) <= _partitioner->getPartSize(1))? "_top.gp.pl" : "_bot.gp.pl";
     fstream plFile;
     string plFileName = fileName + postfix;
@@ -583,7 +588,7 @@ void Placer::viaDecision(string& fileName){
     // read .gp.pl
     string str;
     plFile >> str >> str >> str;
-    for(int i = 0; i < _partitioner->getPartSize(die); ++i){
+    for(int i = 0; i < _partitioner->getPartSize(_terminalDecisionDie); ++i){
         plFile >> str;
         int mId = _moduleNameToId[str];
         plFile >> str;
@@ -619,7 +624,7 @@ void Placer::viaDecision(string& fileName){
             for(int j = 0; j < currentNetCellList.size(); ++j){
                 int currentCellId = currentNetCellList[j];
                 Cell* currentCell = _partitioner->_cellArray[currentNetCellList[j]];
-                if(currentCell->getPart() == 0 && die == 0){
+                if(currentCell->getPart() == 0 && _terminalDecisionDie == 0){
                     // pin position
                     double pin_x = _techs[_topTech]._moduleTypes[_moduleIdToType[currentCellId]]._pins[_nets[i][j][1]][0];
                     double pin_y = _techs[_topTech]._moduleTypes[_moduleIdToType[currentCellId]]._pins[_nets[i][j][1]][1];
@@ -631,7 +636,7 @@ void Placer::viaDecision(string& fileName){
                     minY = min(pin_y, minY);
                     ++num_pin;
                 }
-                if(currentCell->getPart() == 1 && die == 1){
+                if(currentCell->getPart() == 1 && _terminalDecisionDie == 1){
                     // pin position
                     double pin_x = _techs[_botTech]._moduleTypes[_moduleIdToType[currentCellId]]._pins[_nets[i][j][1]][0];
                     double pin_y = _techs[_botTech]._moduleTypes[_moduleIdToType[currentCellId]]._pins[_nets[i][j][1]][1];
@@ -691,11 +696,11 @@ void Placer::viaDecision(string& fileName){
         int index_y = _cuttedNetIdToNearestVia[currentNetId][1];
         //cout << "via : " << _cuttedNetIdToNearestVia[currentNetId][0] << " , " << _cuttedNetIdToNearestVia[currentNetId][1] << endl;
         if(_occupiedViaMap[index_x][index_y]){
-            //cout << "Occupied!! pos : " << index_x << " , " << index_y << endl;
+            cout << currentNetId <<"  Occupied!! pos : " << index_x << " , " << index_y << endl;
             // BFS
             BFS_via(currentNetId,index_x, index_y);
             ++occ;
-            //cout << "Find another via : " << _cuttedNetIdToNearestVia[currentNetId][0] << " , " << _cuttedNetIdToNearestVia[currentNetId][1] << endl;
+            cout << currentNetId << "  Find another via : " << _cuttedNetIdToNearestVia[currentNetId][0] << " , " << _cuttedNetIdToNearestVia[currentNetId][1] << endl;
         }
         else{
             _occupiedViaMap[index_x][index_y] = true;
@@ -709,7 +714,6 @@ void Placer::viaDecision(string& fileName){
 void Placer::outputViaDecisionResult(string& fileName){
 
     // chack .gp.pl readed
-    bool die = !(_partitioner->getPartSize(0) <= _partitioner->getPartSize(1));
     string postfix = (_partitioner->getPartSize(0) <= _partitioner->getPartSize(1))? "_top.gp.pl" : "_bot.gp.pl";
     fstream plFile;
     string plFileName = fileName + postfix;
@@ -743,17 +747,28 @@ void Placer::outputViaDecisionResult(string& fileName){
         int index_y = _cuttedNetIdToNearestVia[cuttedNetId][1];
         int pos_x = _spacingTerminal + index_x * (_sizeTerminalX + _spacingTerminal) + _sizeTerminalX/2;
         int pos_y = _spacingTerminal + index_y * (_sizeTerminalY + _spacingTerminal) + _sizeTerminalY/2;
-        fout << "n" + to_string(_cutted_net[i]) << "\t" << pos_x << "\t" << pos_y << " : N" << endl;
-        fout2 << "n" + to_string(_cutted_net[i]) << "\t" << pos_x << "\t" << pos_y << " : N" << endl;
+        fout << _netIdToName[_cutted_net[i]] << "\t" << pos_x << "\t" << pos_y << " : N" << endl;
+        fout2 << _netIdToName[_cutted_net[i]] << "\t" << pos_x << "\t" << pos_y << " : N" << endl;
     }
     // write modules
     for(int i = 0; i < _num_module; ++i){
-        if(fileName == "case1")
         if(_partitioner->_cellArray[i]->getPart() == 0){
-            fout << _modules[i].m_name << "\t" << _modules[i].m_x << "\t" << _modules[i].m_y << "\t" << 0 << " : N" << endl;
+            if(_terminalDecisionDie == 0){
+                fout << _modules[i].m_name << "\t" << _modules[i].m_x << "\t" << _modules[i].m_y << "\t" << 0 << " : N" << endl;
+            }
+            else{
+                fout << _modules[i].m_name << "\t" << _dieURX/2 << "\t" << _dieURY/2 << "\t" << 0 << " : N" << endl;
+            }
+            
         }
         else{
-            fout2 << _modules[i].m_name << "\t" << _modules[i].m_x << "\t" << _modules[i].m_y << "\t" << 0 << " : N" << endl;
+            if(_terminalDecisionDie == 1){
+                fout2 << _modules[i].m_name << "\t" << _modules[i].m_x << "\t" << _modules[i].m_y << "\t" << 0 << " : N" << endl;
+            }
+            else{
+                fout2 << _modules[i].m_name << "\t" << _dieURX/2 << "\t" << _dieURY/2 << "\t" << 0 << " : N" << endl;
+            }
+            
         }
     }
 
@@ -770,8 +785,8 @@ void Placer::outputViaDecisionResult(string& fileName){
     fout << "NumTerminals :\t" << num_term << endl << endl;
     fout2 << "NumTerminals :\t" << num_term << endl << endl;
     for(int i = 0; i < num_term; ++i){
-        fout << "n" + to_string(_cutted_net[i]) << "\t" << 0 << "\t" << 0 << "\t" << "terminal" << endl;
-        fout2 << "n" + to_string(_cutted_net[i]) << "\t" << 0 << "\t" << 0 << "\t" << "terminal" << endl;
+        fout << _netIdToName[_cutted_net[i]] << "\t" << 0 << "\t" << 0 << "\t" << "terminal" << endl;
+        fout2 << _netIdToName[_cutted_net[i]] << "\t" << 0 << "\t" << 0 << "\t" << "terminal" << endl;
     }
     for(int i = 0; i < _num_module; ++i){
         if(_partitioner->_cellArray[i]->getPart() == 0){
@@ -844,10 +859,10 @@ void Placer::outputViaDecisionResult(string& fileName){
             ++top_net_degree;
             ++bot_net_degree;
             topNetInfo.append("\t");
-            topNetInfo.append("n" + to_string(i));
+            topNetInfo.append(_netIdToName[i]);
             topNetInfo.append("\tI\n");
             botNetInfo.append("\t");
-            botNetInfo.append("n" + to_string(i));
+            botNetInfo.append(_netIdToName[i]);
             botNetInfo.append("\tI\n");
         }
         for(int j = 0; j < currentNetCellList.size(); ++j){

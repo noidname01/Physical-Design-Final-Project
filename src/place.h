@@ -162,6 +162,8 @@ public:
     int _sizeTerminalY;
     int _spacingTerminal;
 
+	bool _terminalDecisionDie;
+
     Partitioner* _partitioner;
 
     int _num_module;
@@ -171,6 +173,7 @@ public:
     int _num_net;
     vector<vector<vector<int>>> _nets;
     map<string, int> _netNameToId;
+	vector<string> _netIdToName;
 
     vector<int> _moduleIdToType;
 
